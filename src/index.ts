@@ -2,6 +2,8 @@
 // ETS — Express Server Entry Point
 // ============================================================
 
+import "dotenv/config"; // Load .env before any other imports
+
 import express from "express";
 import cors from "cors";
 import router from "./routes";
