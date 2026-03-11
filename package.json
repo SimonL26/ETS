@@ -4,12 +4,12 @@
   "description": "Expense Tracking System — Backend API",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/index.ts",
-    "build": "tsc",
+    "dev": "nodemon --exec ts-node --project config/tsconfig.json src/index.ts",
+    "build": "tsc -p config/tsconfig.json",
     "start": "node dist/index.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test": "jest -c config/jest.config.ts",
+    "test:watch": "jest -c config/jest.config.ts --watch",
+    "test:coverage": "jest -c config/jest.config.ts --coverage"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
