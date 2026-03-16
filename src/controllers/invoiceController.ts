@@ -32,27 +32,46 @@ export async function createInvoice(req: Request, res: Response): Promise<void> 
       return;
     }
 
+    // --- 2026-03-15 added validation for expense category ---
+    //Select all expenses categories for the company
     const { data, error } = await supabase
-      .from("invoices")
-      .insert({
-        invoice_number: invoiceNumber,
-        invoice_date: invoiceDate,
-        issue_party: issueParty,
-        amount,
-        owner_company_id: companyId,
-        reference_month: referenceMonth,
-        expense_category: expenseCategory,
-        attached_file: attachedFile ?? null,
-      })
-      .select()
-      .single();
+      .from("expense_categories")
+      .select("expense_type")
+      .eq("owner_company_id", companyId)
+      .order("created_at", { ascending: false });
 
-    if (error) {
-      res.status(500).json({ error: error.message });
+    //If the inputted expenseCategory is in query.data then perform insert of invoice. Else throw 400 error code
+    if (data && data.some((category) => category.expense_type === expenseCategory)) {
+
+      const { data, error } = await supabase
+        .from("invoices")
+        .insert({
+          invoice_number: invoiceNumber,
+          invoice_date: invoiceDate,
+          issue_party: issueParty,
+          amount,
+          owner_company_id: companyId,
+          reference_month: referenceMonth,
+          expense_category: expenseCategory,
+          attached_file: attachedFile ?? null,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        res.status(500).json({ error: error.message });
+        return;
+      }
+
+      res.status(201).json(data);
+
+    } else {
+      res.status(400).json({
+        error: "Invalid expense category"
+      });
       return;
     }
 
-    res.status(201).json(data);
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }
