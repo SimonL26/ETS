@@ -11,8 +11,15 @@
 /** Row type for the `users` table */
 export interface User {
   id: string;
+  email: string;
   username: string;
   created_at: string;
+}
+
+/** Express Request extended with authenticated user info */
+import type { Request } from "express";
+export interface AuthenticatedRequest extends Request {
+  user?: { id: string; email: string };
 }
 
 /** Row type for the `companies` table */
@@ -56,16 +63,19 @@ export interface Database {
       users: {
         Row: {
           id: string;
+          email: string;
           username: string;
           created_at: string;
         };
         Insert: {
           id?: string;
+          email: string;
           username: string;
           created_at?: string;
         };
         Update: {
           id?: string;
+          email?: string;
           username?: string;
           created_at?: string;
         };

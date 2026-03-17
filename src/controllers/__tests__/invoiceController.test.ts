@@ -51,14 +51,26 @@ describe("InvoiceController", () => {
 
   // ── createInvoice ──────────────────────────────────────
   describe("createInvoice", () => {
-    it("should create invoice and return 201", async () => {
-      (supabase.from as jest.Mock).mockReturnValue({
-        insert: jest.fn().mockReturnValue({
+    it("should create invoice and return 201 when category is valid", async () => {
+      // First call: category lookup; Second call: invoice insert
+      (supabase.from as jest.Mock)
+        .mockReturnValueOnce({
           select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: sampleInvoice, error: null }),
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: [{ expense_type: "Rent" }],
+                error: null,
+              }),
+            }),
           }),
-        }),
-      });
+        })
+        .mockReturnValueOnce({
+          insert: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({ data: sampleInvoice, error: null }),
+            }),
+          }),
+        });
 
       const req = mockReq({ companyId: "c1" }, {
         invoiceNumber: "252/26",
@@ -83,14 +95,48 @@ describe("InvoiceController", () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
-    it("should return 500 on DB error", async () => {
-      (supabase.from as jest.Mock).mockReturnValue({
-        insert: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: null, error: { message: "DB failure" } }),
+    it("should return 400 if expense category is invalid", async () => {
+      (supabase.from as jest.Mock).mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            order: jest.fn().mockResolvedValue({
+              data: [{ expense_type: "Rent" }, { expense_type: "Food" }],
+              error: null,
+            }),
           }),
         }),
       });
+
+      const req = mockReq({ companyId: "c1" }, {
+        invoiceNumber: "1", invoiceDate: "2026-02-15", issueParty: "V",
+        amount: 100, referenceMonth: "2026-02-01", expenseCategory: "InvalidCategory",
+      });
+      const res = mockRes();
+      await createInvoice(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: "Invalid expense category" });
+    });
+
+    it("should return 500 on DB error during insert", async () => {
+      (supabase.from as jest.Mock)
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: [{ expense_type: "Rent" }],
+                error: null,
+              }),
+            }),
+          }),
+        })
+        .mockReturnValueOnce({
+          insert: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({ data: null, error: { message: "DB failure" } }),
+            }),
+          }),
+        });
 
       const req = mockReq({ companyId: "c1" }, {
         invoiceNumber: "1", invoiceDate: "2026-02-15", issueParty: "V",
